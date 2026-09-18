@@ -2,12 +2,12 @@
 
 import React from "react";
 
-export const BoardSkeleton: React.FC = () => {
+export const BoardSkeleton: React.FC = React.memo(function BoardSkeleton() {
   return (
     <div
       role="status"
       aria-label="Loading board..."
-      className="flex flex-col h-full animate-pulse select-none"
+      className="flex flex-col h-full animate-pulse select-none transition-opacity duration-200 animate-in fade-in-50"
     >
       {/* Header Skeleton */}
       <header className="flex flex-wrap items-center justify-between gap-4 px-8 py-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-10">
@@ -65,4 +65,4 @@ export const BoardSkeleton: React.FC = () => {
       </main>
     </div>
   );
-};
+});

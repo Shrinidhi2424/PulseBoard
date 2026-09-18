@@ -44,7 +44,9 @@ export async function saveBoard(state: BoardState): Promise<void> {
 
     const database = await db;
     await database.put(STORE_NAME, state, BOARD_KEY);
-    console.log("[IndexedDB] Board snapshot persisted to IndexedDB.");
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[IndexedDB] Board snapshot persisted to IndexedDB.");
+    }
   } catch (err) {
     console.warn("[IndexedDB] Error persisting board to IndexedDB:", err);
   }

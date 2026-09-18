@@ -1,4 +1,4 @@
-const CACHE_NAME = "pulseboard-shell-v1";
+const CACHE_NAME = "pulseboard-shell-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -70,7 +70,8 @@ self.addEventListener("fetch", (event) => {
     url.pathname.endsWith(".js") ||
     url.pathname.endsWith(".css") ||
     url.pathname.endsWith(".ico") ||
-    url.pathname.endsWith(".json")
+    url.pathname.endsWith(".png") ||
+    url.pathname === "/manifest.json"
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {

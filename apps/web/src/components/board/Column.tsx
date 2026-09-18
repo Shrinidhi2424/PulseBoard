@@ -108,14 +108,7 @@ export const Column: React.FC<ColumnProps> = React.memo(({
           </div>
         ) : (
           tasks.map((task) => (
-            <div
-              key={task.id}
-              role="listitem"
-              style={{
-                contentVisibility: "auto",
-                containIntrinsicSize: "0 88px",
-              }}
-            >
+            <div key={task.id} role="listitem">
               <DraggableTaskCard
                 task={task}
                 onClick={() => onTaskClick?.(task)}

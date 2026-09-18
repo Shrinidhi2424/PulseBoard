@@ -20,10 +20,14 @@ export class SyncQueue {
     }
 
     const itemsToFlush = [...this.queue];
+    const failed: WSMessage[] = [];
     for (const action of itemsToFlush) {
-      sendFn(action);
+      const ok = sendFn(action);
+      if (ok === false) {
+        failed.push(action);
+      }
     }
-    this.queue = [];
+    this.queue = failed;
   }
 
   /**

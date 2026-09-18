@@ -113,8 +113,9 @@ export const Board: React.FC = () => {
     e.preventDefault();
     const title = newTaskTitle.trim();
     if (!title) return;
-    addTask(targetColumnId, title);
-    sendAddTask(targetColumnId, title);
+    const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    addTask(targetColumnId, title, taskId);
+    sendAddTask(targetColumnId, title, taskId);
     setNewTaskTitle("");
     setIsNewTaskModalOpen(false);
   }, [addTask, newTaskTitle, sendAddTask, targetColumnId]);
@@ -180,11 +181,11 @@ export const Board: React.FC = () => {
             <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
               PulseBoard
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Phase 9 E2E & Visual Polish
+                Live Collaboration
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              Playwright E2E testing, loading skeleton, and column empty states
+              Real-time multi-user Kanban board with offline synchronization
             </p>
           </div>
         </div>
@@ -371,12 +372,17 @@ export const Board: React.FC = () => {
             <input
               id="new-task-title"
               type="text"
+              maxLength={500}
+              aria-describedby="new-task-title-hint"
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
               placeholder="e.g. Write comprehensive unit tests"
               autoFocus
               className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 text-sm"
             />
+            <p id="new-task-title-hint" className="text-[11px] text-slate-500 mt-1.5">
+              Title must be between 1 and 500 characters ({newTaskTitle.length}/500).
+            </p>
           </div>
         </form>
       </Modal>

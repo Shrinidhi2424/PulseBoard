@@ -54,12 +54,23 @@ export function getBoardState(): BoardState {
   return currentBoardState;
 }
 
-export function handleMoveTask(payload: {
-  taskId: string;
-  toColumnId: string;
-  toIndex: number;
-}): BoardState {
-  const { taskId, toColumnId, toIndex } = payload;
+export function handleMoveTask(payload: unknown): BoardState {
+  if (!payload || typeof payload !== "object") return currentBoardState;
+  const { taskId, toColumnId, toIndex } = payload as {
+    taskId?: unknown;
+    toColumnId?: unknown;
+    toIndex?: unknown;
+  };
+
+  if (
+    typeof taskId !== "string" ||
+    typeof toColumnId !== "string" ||
+    typeof toIndex !== "number" ||
+    !Number.isFinite(toIndex)
+  ) {
+    return currentBoardState;
+  }
+
   const task = currentBoardState.tasks[taskId];
   if (!task) return currentBoardState;
 
@@ -133,20 +144,40 @@ export function handleMoveTask(payload: {
   return currentBoardState;
 }
 
-export function handleAddTask(payload: {
-  columnId: string;
-  title: string;
-}): BoardState {
-  const { columnId, title } = payload;
+export function handleAddTask(payload: unknown): BoardState {
+  if (!payload || typeof payload !== "object") return currentBoardState;
+  const { columnId, title, id: customId } = payload as {
+    columnId?: unknown;
+    title?: unknown;
+    id?: unknown;
+  };
+
+  if (typeof columnId !== "string" || typeof title !== "string") {
+    return currentBoardState;
+  }
+
+  const cleanTitle = title.trim();
+  if (!cleanTitle || cleanTitle.length > 500) {
+    return currentBoardState;
+  }
+
   const column = currentBoardState.columns[columnId];
   if (!column) return currentBoardState;
 
-  const id = `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  // Deduplication check if client passed an ID that already exists
+  if (typeof customId === "string" && customId && currentBoardState.tasks[customId]) {
+    return currentBoardState;
+  }
+
+  const id =
+    typeof customId === "string" && customId.trim() && customId.length <= 100
+      ? customId.trim()
+      : `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const order = column.taskIds.length;
 
   const newTask: Task = {
     id,
-    title,
+    title: cleanTitle,
     columnId,
     order,
   };

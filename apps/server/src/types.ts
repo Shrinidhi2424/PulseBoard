@@ -20,5 +20,5 @@ export type BoardState = {
 export type WSMessage =
   | { type: "SYNC_STATE"; payload: BoardState }
   | { type: "MOVE_TASK"; payload: { taskId: string; toColumnId: string; toIndex: number } }
-  | { type: "ADD_TASK"; payload: { columnId: string; title: string } }
+  | { type: "ADD_TASK"; payload: { columnId: string; title: string; id?: string } }
   | { type: "USER_COUNT"; payload: number };

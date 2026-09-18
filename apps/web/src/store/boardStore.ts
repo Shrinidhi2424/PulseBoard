@@ -1,11 +1,10 @@
 import { create } from "zustand";
 import { BoardState, Column, Task } from "../types/board";
-import { saveBoard, loadBoard } from "../lib/db";
+import { saveBoard, loadBoard, clearBoard } from "../lib/db";
 
 export interface BoardStore extends BoardState {
   moveTask: (taskId: string, toColumnId: string, toIndex: number) => void;
-  addTask: (columnId: string, title: string) => void;
-  setBoard: (state: BoardState) => void;
+  addTask: (columnId: string, title: string, customId?: string) => void;
   applySyncState: (state: BoardState) => void;
   resetToInitial: () => void;
   hydrateFromStorage: () => Promise<boolean>;
@@ -137,12 +136,13 @@ export const useBoardStore = create<BoardStore>((set) => ({
     });
   },
 
-  addTask: (columnId: string, title: string) => {
+  addTask: (columnId: string, title: string, customId?: string) => {
     set((state) => {
       const column = state.columns[columnId];
       if (!column) return state;
 
-      const id = `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const id =
+        customId || `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
       const order = column.taskIds.length;
 
       const newTask: Task = {
@@ -168,14 +168,6 @@ export const useBoardStore = create<BoardStore>((set) => ({
     });
   },
 
-  setBoard: (state: BoardState) => {
-    set({
-      columns: state.columns,
-      tasks: state.tasks,
-      columnOrder: state.columnOrder,
-    });
-  },
-
   applySyncState: (state: BoardState) => {
     set({
       columns: state.columns,
@@ -186,6 +178,7 @@ export const useBoardStore = create<BoardStore>((set) => ({
 
   resetToInitial: () => {
     set({ ...initialBoardState });
+    clearBoard();
   },
 
   hydrateFromStorage: async () => {
@@ -206,13 +199,19 @@ export const useBoardStore = create<BoardStore>((set) => ({
   },
 }));
 
-// Automatic persistence subscription: write snapshot to IndexedDB on every state change
+// Automatic persistence subscription: debounced snapshot write to IndexedDB to avoid write storm
 if (typeof window !== "undefined") {
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
   useBoardStore.subscribe((state) => {
-    saveBoard({
-      columns: state.columns,
-      tasks: state.tasks,
-      columnOrder: state.columnOrder,
-    });
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+    }
+    saveTimer = setTimeout(() => {
+      saveBoard({
+        columns: state.columns,
+        tasks: state.tasks,
+        columnOrder: state.columnOrder,
+      });
+    }, 1000);
   });
 }

@@ -1,0 +1,4 @@
+# PulseBoard robots.txt
+# Disallow search engine crawlers on the dynamic web application
+User-agent: *
+Disallow: /

@@ -18,7 +18,7 @@ export function useBoardSync() {
   const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const setBoard = useBoardStore((state) => state.setBoard);
+  const applySyncState = useBoardStore((state) => state.applySyncState);
   const hydrateFromStorage = useBoardStore((state) => state.hydrateFromStorage);
 
   // Hydrate cached board snapshot from IndexedDB on initial mount
@@ -37,7 +37,7 @@ export function useBoardSync() {
       switch (message.type) {
         case "SYNC_STATE":
           console.log("[useBoardSync] Received SYNC_STATE from server. Reconciling board state.");
-          setBoard(message.payload);
+          applySyncState(message.payload);
           setIsLoading(false);
           break;
         case "USER_COUNT":
@@ -48,12 +48,15 @@ export function useBoardSync() {
           break;
       }
     },
-    [setBoard]
+    [applySyncState]
   );
+
+  const handleMessageRef = useRef(handleMessage);
+  handleMessageRef.current = handleMessage;
 
   useEffect(() => {
     const client = new WSClient({
-      onMessage: handleMessage,
+      onMessage: (msg) => handleMessageRef.current(msg),
       onOpen: () => {
         console.log("[useBoardSync] WebSocket connected (Online).");
         setConnectionStatus("online");
@@ -62,13 +65,13 @@ export function useBoardSync() {
         // On reconnect (WS onopen): flush queue in FIFO order to replay offline actions
         if (syncQueue.size() > 0) {
           console.log(
-            `[useBoardSync] Flusing ${syncQueue.size()} offline queued actions in FIFO order...`
+            `[useBoardSync] Flushing ${syncQueue.size()} offline queued actions in FIFO order...`
           );
           syncQueue.flush((action) => {
             console.log(`[useBoardSync] Replaying queued action:`, action.type);
-            client.send(action);
+            return client.send(action);
           });
-          setQueuedCount(0);
+          setQueuedCount(syncQueue.size());
         }
       },
       onClose: () => {
@@ -102,7 +105,7 @@ export function useBoardSync() {
       client.close();
       wsClientRef.current = null;
     };
-  }, [handleMessage]);
+  }, []);
 
   // When browser goes offline or back online
   useEffect(() => {
@@ -131,10 +134,10 @@ export function useBoardSync() {
     }
   }, []);
 
-  const sendAddTask = useCallback((columnId: string, title: string) => {
+  const sendAddTask = useCallback((columnId: string, title: string, id?: string) => {
     const message: WSMessage = {
       type: "ADD_TASK",
-      payload: { columnId, title },
+      payload: { columnId, title, ...(id ? { id } : {}) },
     };
 
     if (wsClientRef.current && wsClientRef.current.isConnected()) {

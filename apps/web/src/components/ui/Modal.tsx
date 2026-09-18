@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useId } from "react";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -17,6 +17,8 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
 }) => {
+  const titleId = useId();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -40,7 +42,7 @@ export const Modal: React.FC<ModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
       onClick={onClose}
     >
       <div
@@ -48,7 +50,7 @@ export const Modal: React.FC<ModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-          <h2 id="modal-title" className="text-lg font-semibold text-slate-100">
+          <h2 id={titleId} className="text-lg font-semibold text-slate-100">
             {title}
           </h2>
           <button

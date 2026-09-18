@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useBoardStore, initialBoardState } from "@/store/boardStore";
+import { useBoardStore } from "@/store/boardStore";
 import { BoardState } from "@/types/board";
 
 describe("boardStore unit tests", () => {

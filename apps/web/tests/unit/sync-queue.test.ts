@@ -79,4 +79,28 @@ describe("sync-queue unit tests", () => {
     expect(queue.size()).toBe(0);
     expect(queue.getQueue()).toEqual([]);
   });
+
+  it("flush retains actions in queue if sendFn returns false", () => {
+    const msg1: WSMessage = {
+      type: "ADD_TASK",
+      payload: { columnId: "col-1", title: "Action 1" },
+    };
+    const msg2: WSMessage = {
+      type: "ADD_TASK",
+      payload: { columnId: "col-1", title: "Action 2" },
+    };
+    queue.enqueue(msg1);
+    queue.enqueue(msg2);
+
+    const sendFn = vi.fn((action: WSMessage) => {
+      if (action === msg1) return false;
+      return true;
+    });
+
+    queue.flush(sendFn);
+
+    expect(sendFn).toHaveBeenCalledTimes(2);
+    expect(queue.size()).toBe(1);
+    expect(queue.getQueue()).toEqual([msg1]);
+  });
 });

@@ -139,6 +139,7 @@ export class WSClient {
 
   public close(): void {
     this.isExplicitlyClosed = true;
+    this.reconnectAttempts = 0;
     this.clearReconnectTimer();
     if (this.socket) {
       this.socket.close();
