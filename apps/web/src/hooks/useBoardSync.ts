@@ -2,20 +2,28 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { WSClient } from "@/lib/ws-client";
+import { syncQueue } from "@/lib/sync-queue";
+import { useOnlineStatus } from "./useOnlineStatus";
 import { WSMessage } from "@/types/board";
 import { useBoardStore } from "@/store/boardStore";
+import { ConnectionState } from "@/components/board/ConnectionBadge";
 
 export function useBoardSync() {
   const wsClientRef = useRef<WSClient | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [userCount, setUserCount] = useState(1);
+  const { isOnline } = useOnlineStatus();
+
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionState>("reconnecting");
+  const [userCount, setUserCount] = useState<number>(1);
+  const [queuedCount, setQueuedCount] = useState<number>(() => syncQueue.size());
+  const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
+
   const setBoard = useBoardStore((state) => state.setBoard);
 
   const handleMessage = useCallback(
     (message: WSMessage) => {
       switch (message.type) {
         case "SYNC_STATE":
-          console.log("[useBoardSync] Received SYNC_STATE from server, reconciling board state.");
+          console.log("[useBoardSync] Received SYNC_STATE from server. Reconciling board state.");
           setBoard(message.payload);
           break;
         case "USER_COUNT":
@@ -31,10 +39,45 @@ export function useBoardSync() {
 
   useEffect(() => {
     const client = new WSClient({
-      onOpen: () => setIsConnected(true),
-      onClose: () => setIsConnected(false),
-      onError: () => setIsConnected(false),
-      onMessage: handleMessage,
+      onOpen: () => {
+        console.log("[useBoardSync] WebSocket connected (Online).");
+        setConnectionStatus("online");
+        setReconnectAttempt(0);
+
+        // On reconnect (WS onopen): flush queue in FIFO order to replay offline actions
+        if (syncQueue.size() > 0) {
+          console.log(
+            `[useBoardSync] Flusing ${syncQueue.size()} offline queued actions in FIFO order...`
+          );
+          syncQueue.flush((action) => {
+            console.log(`[useBoardSync] Replaying queued action:`, action.type);
+            client.send(action);
+          });
+          setQueuedCount(0);
+        }
+      },
+      onClose: () => {
+        if (!navigator.onLine) {
+          setConnectionStatus("offline");
+        } else {
+          setConnectionStatus("reconnecting");
+        }
+      },
+      onError: () => {
+        if (!navigator.onLine) {
+          setConnectionStatus("offline");
+        } else {
+          setConnectionStatus("reconnecting");
+        }
+      },
+      onReconnecting: (attempt) => {
+        setReconnectAttempt(attempt);
+        if (!navigator.onLine) {
+          setConnectionStatus("offline");
+        } else {
+          setConnectionStatus("reconnecting");
+        }
+      },
     });
 
     wsClientRef.current = client;
@@ -46,27 +89,54 @@ export function useBoardSync() {
     };
   }, [handleMessage]);
 
+  // When browser goes offline or back online
+  useEffect(() => {
+    if (!isOnline) {
+      setConnectionStatus("offline");
+    } else {
+      if (wsClientRef.current && !wsClientRef.current.isConnected()) {
+        setConnectionStatus("reconnecting");
+        wsClientRef.current.connect();
+      }
+    }
+  }, [isOnline]);
+
   const sendMove = useCallback((taskId: string, toColumnId: string, toIndex: number) => {
-    if (wsClientRef.current) {
-      wsClientRef.current.send({
-        type: "MOVE_TASK",
-        payload: { taskId, toColumnId, toIndex },
-      });
+    const message: WSMessage = {
+      type: "MOVE_TASK",
+      payload: { taskId, toColumnId, toIndex },
+    };
+
+    if (wsClientRef.current && wsClientRef.current.isConnected()) {
+      wsClientRef.current.send(message);
+    } else {
+      console.log("[useBoardSync] Offline or disconnected: Enqueuing MOVE_TASK into SyncQueue.");
+      syncQueue.enqueue(message);
+      setQueuedCount(syncQueue.size());
     }
   }, []);
 
   const sendAddTask = useCallback((columnId: string, title: string) => {
-    if (wsClientRef.current) {
-      wsClientRef.current.send({
-        type: "ADD_TASK",
-        payload: { columnId, title },
-      });
+    const message: WSMessage = {
+      type: "ADD_TASK",
+      payload: { columnId, title },
+    };
+
+    if (wsClientRef.current && wsClientRef.current.isConnected()) {
+      wsClientRef.current.send(message);
+    } else {
+      console.log("[useBoardSync] Offline or disconnected: Enqueuing ADD_TASK into SyncQueue.");
+      syncQueue.enqueue(message);
+      setQueuedCount(syncQueue.size());
     }
   }, []);
 
   return {
-    isConnected,
+    connectionStatus,
+    isConnected: connectionStatus === "online",
     userCount,
+    queuedCount,
+    reconnectAttempt,
     sendMove,
     sendAddTask,
   };

@@ -19,12 +19,20 @@ import { useBoardStore } from "@/store/boardStore";
 import { useBoardSync } from "@/hooks/useBoardSync";
 import { Column } from "./Column";
 import { TaskCard } from "./TaskCard";
+import { ConnectionBadge } from "./ConnectionBadge";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 
 export const Board: React.FC = () => {
   const { columns, tasks, columnOrder, moveTask, addTask } = useBoardStore();
-  const { isConnected, userCount, sendMove, sendAddTask } = useBoardSync();
+  const {
+    connectionStatus,
+    userCount,
+    queuedCount,
+    reconnectAttempt,
+    sendMove,
+    sendAddTask,
+  } = useBoardSync();
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -160,11 +168,11 @@ export const Board: React.FC = () => {
             <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
               PulseBoard
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Phase 4 Real-time Sync
+                Phase 5 Reconnect & Queue
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              WebSocket live sync with optimistic client updates
+              Offline sync queue with exponential-backoff reconnect
             </p>
           </div>
         </div>
@@ -200,28 +208,12 @@ export const Board: React.FC = () => {
 
         <div className="flex items-center gap-3">
           {/* Real-time Connection & Active Users Indicator */}
-          <div
-            role="status"
-            aria-live="polite"
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 shadow-xs"
-          >
-            <span
-              aria-hidden="true"
-              className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
-                isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-              }`}
-            />
-            <span>
-              {isConnected ? (
-                <>
-                  <span className="font-semibold text-emerald-400">Live</span> • {userCount}{" "}
-                  {userCount === 1 ? "user" : "users"} connected
-                </>
-              ) : (
-                <span className="text-amber-400">Connecting to server...</span>
-              )}
-            </span>
-          </div>
+          <ConnectionBadge
+            status={connectionStatus}
+            userCount={userCount}
+            queuedCount={queuedCount}
+            reconnectAttempt={reconnectAttempt}
+          />
 
           <Button
             variant="primary"
