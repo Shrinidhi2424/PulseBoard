@@ -16,6 +16,7 @@ import {
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Task } from "@/types/board";
 import { useBoardStore } from "@/store/boardStore";
+import { useBoardSync } from "@/hooks/useBoardSync";
 import { Column } from "./Column";
 import { TaskCard } from "./TaskCard";
 import { Button } from "../ui/Button";
@@ -23,6 +24,8 @@ import { Modal } from "../ui/Modal";
 
 export const Board: React.FC = () => {
   const { columns, tasks, columnOrder, moveTask, addTask } = useBoardStore();
+  const { isConnected, userCount, sendMove, sendAddTask } = useBoardSync();
+
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -61,6 +64,7 @@ export const Board: React.FC = () => {
       const toColumnId = overId;
       const toIndex = columns[toColumnId].taskIds.length;
       moveTask(taskId, toColumnId, toIndex);
+      sendMove(taskId, toColumnId, toIndex);
       return;
     }
 
@@ -71,7 +75,9 @@ export const Board: React.FC = () => {
       const targetColumn = columns[toColumnId];
       if (targetColumn) {
         const toIndex = targetColumn.taskIds.indexOf(overId);
-        moveTask(taskId, toColumnId, toIndex >= 0 ? toIndex : 0);
+        const finalIndex = toIndex >= 0 ? toIndex : 0;
+        moveTask(taskId, toColumnId, finalIndex);
+        sendMove(taskId, toColumnId, finalIndex);
       }
     }
   };
@@ -89,8 +95,10 @@ export const Board: React.FC = () => {
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-    addTask(targetColumnId, newTaskTitle.trim());
+    const title = newTaskTitle.trim();
+    if (!title) return;
+    addTask(targetColumnId, title);
+    sendAddTask(targetColumnId, title);
     setNewTaskTitle("");
     setIsNewTaskModalOpen(false);
   };
@@ -152,11 +160,11 @@ export const Board: React.FC = () => {
             <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
               PulseBoard
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Phase 3 Keyboard Accessible
+                Phase 4 Real-time Sync
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              WCAG accessible Kanban with pointer & keyboard drag support
+              WebSocket live sync with optimistic client updates
             </p>
           </div>
         </div>
@@ -191,17 +199,30 @@ export const Board: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Real-time Connection & Active Users Indicator */}
           <div
             role="status"
             aria-live="polite"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 shadow-xs"
           >
             <span
               aria-hidden="true"
-              className="h-2 w-2 rounded-full bg-emerald-500"
+              className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
+                isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+              }`}
             />
-            <span>Local (Keyboard Ready)</span>
+            <span>
+              {isConnected ? (
+                <>
+                  <span className="font-semibold text-emerald-400">Live</span> • {userCount}{" "}
+                  {userCount === 1 ? "user" : "users"} connected
+                </>
+              ) : (
+                <span className="text-amber-400">Connecting to server...</span>
+              )}
+            </span>
           </div>
+
           <Button
             variant="primary"
             size="sm"

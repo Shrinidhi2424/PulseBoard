@@ -1,4 +1,4 @@
-import { BoardState } from "./types.js";
+import { BoardState, Column, Task } from "./types.js";
 
 export const initialBoardState: BoardState = {
   columns: {
@@ -46,3 +46,129 @@ export const initialBoardState: BoardState = {
   },
   columnOrder: ["col-1", "col-2", "col-3"],
 };
+
+// In-memory state
+let currentBoardState: BoardState = JSON.parse(JSON.stringify(initialBoardState));
+
+export function getBoardState(): BoardState {
+  return currentBoardState;
+}
+
+export function handleMoveTask(payload: {
+  taskId: string;
+  toColumnId: string;
+  toIndex: number;
+}): BoardState {
+  const { taskId, toColumnId, toIndex } = payload;
+  const task = currentBoardState.tasks[taskId];
+  if (!task) return currentBoardState;
+
+  const fromColumnId = task.columnId;
+  const fromColumn = currentBoardState.columns[fromColumnId];
+  const toColumn = currentBoardState.columns[toColumnId];
+
+  if (!fromColumn || !toColumn) return currentBoardState;
+
+  const newColumns: Record<string, Column> = { ...currentBoardState.columns };
+  const newTasks: Record<string, Task> = { ...currentBoardState.tasks };
+
+  if (fromColumnId === toColumnId) {
+    // Reorder within same column
+    const newTaskIds = [...fromColumn.taskIds.filter((id) => id !== taskId)];
+    const targetIndex = Math.max(0, Math.min(toIndex, newTaskIds.length));
+    newTaskIds.splice(targetIndex, 0, taskId);
+
+    newColumns[fromColumnId] = {
+      ...fromColumn,
+      taskIds: newTaskIds,
+    };
+
+    newTaskIds.forEach((id, index) => {
+      if (newTasks[id]) {
+        newTasks[id] = { ...newTasks[id], order: index };
+      }
+    });
+  } else {
+    // Move to different column
+    const fromTaskIds = fromColumn.taskIds.filter((id) => id !== taskId);
+    const toTaskIds = [...toColumn.taskIds];
+    const targetIndex = Math.max(0, Math.min(toIndex, toTaskIds.length));
+    toTaskIds.splice(targetIndex, 0, taskId);
+
+    newColumns[fromColumnId] = {
+      ...fromColumn,
+      taskIds: fromTaskIds,
+    };
+
+    newColumns[toColumnId] = {
+      ...toColumn,
+      taskIds: toTaskIds,
+    };
+
+    newTasks[taskId] = {
+      ...task,
+      columnId: toColumnId,
+      order: targetIndex,
+    };
+
+    fromTaskIds.forEach((id, index) => {
+      if (newTasks[id]) {
+        newTasks[id] = { ...newTasks[id], order: index };
+      }
+    });
+
+    toTaskIds.forEach((id, index) => {
+      if (newTasks[id]) {
+        newTasks[id] = { ...newTasks[id], order: index };
+      }
+    });
+  }
+
+  currentBoardState = {
+    ...currentBoardState,
+    columns: newColumns,
+    tasks: newTasks,
+  };
+
+  return currentBoardState;
+}
+
+export function handleAddTask(payload: {
+  columnId: string;
+  title: string;
+}): BoardState {
+  const { columnId, title } = payload;
+  const column = currentBoardState.columns[columnId];
+  if (!column) return currentBoardState;
+
+  const id = `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const order = column.taskIds.length;
+
+  const newTask: Task = {
+    id,
+    title,
+    columnId,
+    order,
+  };
+
+  currentBoardState = {
+    ...currentBoardState,
+    columns: {
+      ...currentBoardState.columns,
+      [columnId]: {
+        ...column,
+        taskIds: [...column.taskIds, id],
+      },
+    },
+    tasks: {
+      ...currentBoardState.tasks,
+      [id]: newTask,
+    },
+  };
+
+  return currentBoardState;
+}
+
+export function resetBoardState(): void {
+  currentBoardState = JSON.parse(JSON.stringify(initialBoardState));
+}
