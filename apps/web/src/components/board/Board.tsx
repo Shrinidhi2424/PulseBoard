@@ -21,6 +21,7 @@ import { useBoardSync } from "@/hooks/useBoardSync";
 import { Column } from "./Column";
 import { TaskCard } from "./TaskCard";
 import { ConnectionBadge } from "./ConnectionBadge";
+import { BoardSkeleton } from "./BoardSkeleton";
 import { Button } from "../ui/Button";
 
 // Code-split heavy Modal dialogs so they are not included in the initial page bundle
@@ -36,6 +37,7 @@ export const Board: React.FC = () => {
     userCount,
     queuedCount,
     reconnectAttempt,
+    isLoading,
     sendMove,
     sendAddTask,
   } = useBoardSync();
@@ -151,6 +153,10 @@ export const Board: React.FC = () => {
 
   const activeTask = activeTaskId ? tasks[activeTaskId] : null;
 
+  if (isLoading) {
+    return <BoardSkeleton />;
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Accessible Skip Link */}
@@ -174,11 +180,11 @@ export const Board: React.FC = () => {
             <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
               PulseBoard
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Phase 7 Performance Pass
+                Phase 9 E2E & Visual Polish
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              Code-splitting, zero-CLS font loading, and CSS containment optimizations
+              Playwright E2E testing, loading skeleton, and column empty states
             </p>
           </div>
         </div>

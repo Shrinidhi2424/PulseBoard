@@ -16,6 +16,7 @@ export function useBoardSync() {
   const [userCount, setUserCount] = useState<number>(1);
   const [queuedCount, setQueuedCount] = useState<number>(() => syncQueue.size());
   const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const setBoard = useBoardStore((state) => state.setBoard);
   const hydrateFromStorage = useBoardStore((state) => state.hydrateFromStorage);
@@ -26,6 +27,8 @@ export function useBoardSync() {
       if (hydrated) {
         console.log("[useBoardSync] Successfully hydrated initial board state from IndexedDB.");
       }
+      // Give visual transition or resolve immediately
+      setIsLoading(false);
     });
   }, [hydrateFromStorage]);
 
@@ -35,6 +38,7 @@ export function useBoardSync() {
         case "SYNC_STATE":
           console.log("[useBoardSync] Received SYNC_STATE from server. Reconciling board state.");
           setBoard(message.payload);
+          setIsLoading(false);
           break;
         case "USER_COUNT":
           console.log("[useBoardSync] Active user count updated:", message.payload);
@@ -148,6 +152,7 @@ export function useBoardSync() {
     userCount,
     queuedCount,
     reconnectAttempt,
+    isLoading,
     sendMove,
     sendAddTask,
   };
