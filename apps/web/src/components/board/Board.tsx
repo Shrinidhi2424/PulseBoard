@@ -168,11 +168,11 @@ export const Board: React.FC = () => {
             <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
               PulseBoard
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Phase 5 Reconnect & Queue
+                Phase 6 PWA & IndexedDB
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              Offline sync queue with exponential-backoff reconnect
+              Service Worker app-shell cache with IndexedDB offline persistence
             </p>
           </div>
         </div>

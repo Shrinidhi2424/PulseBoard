@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { BoardState, Column, Task } from "../types/board";
+import { saveBoard, loadBoard } from "../lib/db";
 
 export interface BoardStore extends BoardState {
   moveTask: (taskId: string, toColumnId: string, toIndex: number) => void;
@@ -7,6 +8,7 @@ export interface BoardStore extends BoardState {
   setBoard: (state: BoardState) => void;
   applySyncState: (state: BoardState) => void;
   resetToInitial: () => void;
+  hydrateFromStorage: () => Promise<boolean>;
 }
 
 export const initialBoardState: BoardState = {
@@ -185,4 +187,32 @@ export const useBoardStore = create<BoardStore>((set) => ({
   resetToInitial: () => {
     set({ ...initialBoardState });
   },
+
+  hydrateFromStorage: async () => {
+    try {
+      const cachedState = await loadBoard();
+      if (cachedState && cachedState.columns && cachedState.tasks && cachedState.columnOrder) {
+        set({
+          columns: cachedState.columns,
+          tasks: cachedState.tasks,
+          columnOrder: cachedState.columnOrder,
+        });
+        return true;
+      }
+    } catch (err) {
+      console.warn("[boardStore] Failed to hydrate board from IndexedDB:", err);
+    }
+    return false;
+  },
 }));
+
+// Automatic persistence subscription: write snapshot to IndexedDB on every state change
+if (typeof window !== "undefined") {
+  useBoardStore.subscribe((state) => {
+    saveBoard({
+      columns: state.columns,
+      tasks: state.tasks,
+      columnOrder: state.columnOrder,
+    });
+  });
+}

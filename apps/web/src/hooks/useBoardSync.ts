@@ -18,6 +18,16 @@ export function useBoardSync() {
   const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
 
   const setBoard = useBoardStore((state) => state.setBoard);
+  const hydrateFromStorage = useBoardStore((state) => state.hydrateFromStorage);
+
+  // Hydrate cached board snapshot from IndexedDB on initial mount
+  useEffect(() => {
+    hydrateFromStorage().then((hydrated) => {
+      if (hydrated) {
+        console.log("[useBoardSync] Successfully hydrated initial board state from IndexedDB.");
+      }
+    });
+  }, [hydrateFromStorage]);
 
   const handleMessage = useCallback(
     (message: WSMessage) => {
@@ -39,6 +49,7 @@ export function useBoardSync() {
 
   useEffect(() => {
     const client = new WSClient({
+      onMessage: handleMessage,
       onOpen: () => {
         console.log("[useBoardSync] WebSocket connected (Online).");
         setConnectionStatus("online");
