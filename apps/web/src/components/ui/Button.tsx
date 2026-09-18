@@ -31,10 +31,12 @@ export const Button: React.FC<ButtonProps> = ({
   className = "",
   children,
   disabled,
+  type = "button",
   ...props
 }) => {
   return (
     <button
+      type={type}
       className={`inline-flex items-center justify-center transition-all duration-150 ease-in-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       disabled={disabled}
       {...props}

@@ -31,9 +31,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       role="button"
       tabIndex={0}
       aria-label={`Task: ${task.title}`}
+      aria-roledescription="draggable card"
       onClick={onClick}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        // Allow @dnd-kit keyboard sensor to capture Space/Enter and arrow keys
+        if (listeners && "onKeyDown" in listeners && typeof listeners.onKeyDown === "function") {
+          listeners.onKeyDown(e);
+        }
+        // If not dragged and Space/Enter pressed without modifiers, open details if onClick provided
+        if (!attributes && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           onClick?.();
         }
@@ -43,8 +49,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       {...listeners}
       className={`group relative select-none rounded-xl border bg-slate-900/90 p-4 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
         isDragging
-          ? "opacity-40 border-blue-500/80 shadow-2xl shadow-blue-500/20 scale-[1.02] cursor-grabbing"
-          : "border-slate-800/80 hover:border-slate-700 hover:bg-slate-850 hover:shadow-md cursor-grab"
+          ? "opacity-40 border-blue-500/80 shadow-2xl shadow-blue-500/20 scale-[1.02] cursor-grabbing ring-2 ring-blue-500/50"
+          : "border-slate-800/80 hover:border-slate-700 hover:bg-slate-850 hover:shadow-md cursor-grab active:cursor-grabbing"
       }`}
     >
       <div className="flex items-start justify-between gap-3">

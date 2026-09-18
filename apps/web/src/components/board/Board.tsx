@@ -5,12 +5,15 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   closestCorners,
   DragStartEvent,
   DragEndEvent,
+  type Announcements,
 } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Task } from "@/types/board";
 import { useBoardStore } from "@/store/boardStore";
 import { Column } from "./Column";
@@ -32,6 +35,9 @@ export const Board: React.FC = () => {
       activationConstraint: {
         distance: 5, // 5px movement required to trigger drag; clicks pass through cleanly
       },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
@@ -89,37 +95,117 @@ export const Board: React.FC = () => {
     setIsNewTaskModalOpen(false);
   };
 
+  const announcements: Announcements = {
+    onDragStart({ active }) {
+      const task = tasks[active.id as string];
+      return `Picked up task "${task?.title || active.id}". Use arrow keys to move between columns and positions. Press Space or Enter to drop, Escape to cancel.`;
+    },
+    onDragOver({ active, over }) {
+      if (!over) return undefined;
+      const task = tasks[active.id as string];
+      if (columnOrder.includes(over.id as string)) {
+        const col = columns[over.id as string];
+        return `Task "${task?.title || active.id}" is over column "${col?.title}".`;
+      }
+      const overTask = tasks[over.id as string];
+      if (overTask) {
+        const col = columns[overTask.columnId];
+        return `Task "${task?.title || active.id}" is over task "${overTask.title}" in column "${col?.title}".`;
+      }
+      return undefined;
+    },
+    onDragEnd({ active, over }) {
+      const task = tasks[active.id as string];
+      if (!over) {
+        return `Dropped task "${task?.title || active.id}". Movement cancelled.`;
+      }
+      return `Dropped task "${task?.title || active.id}".`;
+    },
+    onDragCancel({ active }) {
+      const task = tasks[active.id as string];
+      return `Cancelled drag for task "${task?.title || active.id}".`;
+    },
+  };
+
   const activeTask = activeTaskId ? tasks[activeTaskId] : null;
 
   return (
     <div className="flex flex-col h-full">
+      {/* Accessible Skip Link */}
+      <a
+        href="#kanban-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none"
+      >
+        Skip to Kanban board
+      </a>
+
       {/* Header Bar */}
-      <header className="flex items-center justify-between px-8 py-4 border-b border-slate-800 bg-slate-950/70 backdrop-blur-md sticky top-0 z-10">
+      <header className="flex flex-wrap items-center justify-between gap-4 px-8 py-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
+          <div
+            aria-hidden="true"
+            className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20"
+          >
             P
           </div>
           <div>
             <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
               PulseBoard
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Phase 2 DnD + Zustand
+                Phase 3 Keyboard Accessible
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              GPU-accelerated drag-and-drop & optimistic local state
+              WCAG accessible Kanban with pointer & keyboard drag support
             </p>
           </div>
         </div>
 
+        {/* Keyboard Navigation Helper Pill */}
+        <div
+          aria-label="Keyboard shortcuts guide"
+          role="note"
+          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300"
+        >
+          <span className="font-semibold text-slate-400">Keyboard:</span>
+          <span>
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-200">
+              Tab
+            </kbd>{" "}
+            focus
+          </span>
+          <span>•</span>
+          <span>
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-200">
+              Space
+            </kbd>{" "}
+            pick up / drop
+          </span>
+          <span>•</span>
+          <span>
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-200">
+              ← → ↑ ↓
+            </kbd>{" "}
+            move
+          </span>
+        </div>
+
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span>Local State (Optimistic)</span>
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300"
+          >
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 rounded-full bg-emerald-500"
+            />
+            <span>Local (Keyboard Ready)</span>
           </div>
           <Button
             variant="primary"
             size="sm"
+            aria-label="Add new task to board"
             onClick={() => handleOpenAddTask("col-1")}
           >
             + Add Task
@@ -134,8 +220,14 @@ export const Board: React.FC = () => {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveTaskId(null)}
+        accessibility={{ announcements }}
       >
-        <main className="flex-1 overflow-x-auto p-8 bg-gradient-to-b from-slate-950 via-slate-900/50 to-slate-950">
+        <main
+          id="kanban-main"
+          tabIndex={-1}
+          aria-label="Kanban board columns"
+          className="flex-1 overflow-x-auto p-8 bg-gradient-to-b from-slate-950 via-slate-900/50 to-slate-950 outline-none"
+        >
           <div className="flex items-start gap-6 pb-6 min-w-max">
             {columnOrder.map((columnId) => {
               const column = columns[columnId];
@@ -165,7 +257,7 @@ export const Board: React.FC = () => {
                 transform: "translate3d(0, 0, 0)",
                 willChange: "transform",
               }}
-              className="w-72 rotate-2 cursor-grabbing shadow-2xl shadow-blue-500/30"
+              className="w-72 rotate-2 cursor-grabbing shadow-2xl shadow-blue-500/30 ring-2 ring-blue-500"
             >
               <TaskCard task={activeTask} isDragging />
             </div>
