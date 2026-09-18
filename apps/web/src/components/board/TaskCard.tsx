@@ -16,7 +16,7 @@ export interface TaskCardProps {
   innerRef?: React.Ref<HTMLDivElement>;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({
+export const TaskCard: React.FC<TaskCardProps> = React.memo(({
   task,
   onClick,
   isDragging = false,
@@ -66,12 +66,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TaskCard.displayName = "TaskCard";
 
 export const DraggableTaskCard: React.FC<{
   task: Task;
   onClick?: () => void;
-}> = ({ task, onClick }) => {
+}> = React.memo(({ task, onClick }) => {
   const {
     attributes,
     listeners,
@@ -114,4 +116,7 @@ export const DraggableTaskCard: React.FC<{
       />
     </div>
   );
-};
+});
+
+DraggableTaskCard.displayName = "DraggableTaskCard";
+

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import {
   DndContext,
   DragOverlay,
@@ -21,7 +22,12 @@ import { Column } from "./Column";
 import { TaskCard } from "./TaskCard";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { Button } from "../ui/Button";
-import { Modal } from "../ui/Modal";
+
+// Code-split heavy Modal dialogs so they are not included in the initial page bundle
+const Modal = dynamic(
+  () => import("../ui/Modal").then((mod) => mod.Modal),
+  { ssr: false }
+);
 
 export const Board: React.FC = () => {
   const { columns, tasks, columnOrder, moveTask, addTask } = useBoardStore();
@@ -52,11 +58,11 @@ export const Board: React.FC = () => {
     })
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveTaskId(event.active.id as string);
-  };
+  }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTaskId(null);
 
@@ -88,20 +94,20 @@ export const Board: React.FC = () => {
         sendMove(taskId, toColumnId, finalIndex);
       }
     }
-  };
+  }, [columnOrder, columns, tasks, moveTask, sendMove]);
 
-  const handleTaskClick = (task: Task) => {
+  const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenAddTask = (colId: string) => {
+  const handleOpenAddTask = useCallback((colId: string) => {
     setTargetColumnId(colId);
     setNewTaskTitle("");
     setIsNewTaskModalOpen(true);
-  };
+  }, []);
 
-  const handleCreateTask = (e: React.FormEvent) => {
+  const handleCreateTask = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     const title = newTaskTitle.trim();
     if (!title) return;
@@ -109,7 +115,7 @@ export const Board: React.FC = () => {
     sendAddTask(targetColumnId, title);
     setNewTaskTitle("");
     setIsNewTaskModalOpen(false);
-  };
+  }, [addTask, newTaskTitle, sendAddTask, targetColumnId]);
 
   const announcements: Announcements = {
     onDragStart({ active }) {
@@ -168,11 +174,11 @@ export const Board: React.FC = () => {
             <h1 className="text-base font-bold text-slate-100 tracking-tight flex items-center gap-2">
               PulseBoard
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Phase 6 PWA & IndexedDB
+                Phase 7 Performance Pass
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              Service Worker app-shell cache with IndexedDB offline persistence
+              Code-splitting, zero-CLS font loading, and CSS containment optimizations
             </p>
           </div>
         </div>

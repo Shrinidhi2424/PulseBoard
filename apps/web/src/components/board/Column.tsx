@@ -12,7 +12,7 @@ export interface ColumnProps {
   onAddTask?: (columnId: string) => void;
 }
 
-export const Column: React.FC<ColumnProps> = ({
+export const Column: React.FC<ColumnProps> = React.memo(({
   column,
   tasks,
   onTaskClick,
@@ -75,6 +75,7 @@ export const Column: React.FC<ColumnProps> = ({
         )}
       </div>
 
+      {/* Task List Container - optimized with browser-native content-visibility virtualization */}
       <div
         role="list"
         aria-label={`Tasks in ${column.title}`}
@@ -89,7 +90,14 @@ export const Column: React.FC<ColumnProps> = ({
           </div>
         ) : (
           tasks.map((task) => (
-            <div key={task.id} role="listitem">
+            <div
+              key={task.id}
+              role="listitem"
+              style={{
+                contentVisibility: "auto",
+                containIntrinsicSize: "0 88px",
+              }}
+            >
               <DraggableTaskCard
                 task={task}
                 onClick={() => onTaskClick?.(task)}
@@ -100,4 +108,6 @@ export const Column: React.FC<ColumnProps> = ({
       </div>
     </section>
   );
-};
+});
+
+Column.displayName = "Column";
